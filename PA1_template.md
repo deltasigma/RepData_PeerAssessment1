@@ -1,46 +1,51 @@
----
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
----
-```{r setoptions,echo=FALSE}
-# Set defaults
-library("knitr")
-library("lubridate")
-opts_chunk$set(echo = TRUE, results="hide")
-````
+# Reproducible Research: Peer Assessment 1
+
 
 ## Loading and preprocessing the data
 The first step in our report is to unzip the **activity.zip** file and load it into our working dataframe
 
-```{r loading}
+
+```r
 file <- 'activity.zip'
 data <- read.csv(unz(file, 'activity.csv'))
 data$date <- ymd(data$date)
 ```
 
 This is the first lines of the file
-```{r sample_data,results='markup'}
+
+```r
 head(data)
+```
+
+```
+##   steps       date interval
+## 1    NA 2012-10-01        0
+## 2    NA 2012-10-01        5
+## 3    NA 2012-10-01       10
+## 4    NA 2012-10-01       15
+## 5    NA 2012-10-01       20
+## 6    NA 2012-10-01       25
 ```
 
 ## What is mean total number of steps taken per day?
 To answer this question we need to sum all the steps in one day.
 
 The first step will be finding NAs
-```{r}
+
+```r
 valid <- complete.cases(data$steps)
 ```
 
 Now we subset the dataframe and find the unique days
-```{r}
+
+```r
 dataDailySteps <- data[valid, ]
 uniqueDays <- unique(dataDailySteps$date)
-``` 
+```
 
 And finally we calculate the daily sum
-```{r}
+
+```r
 dailySteps <- data.frame(date=as.Date(character()),steps = numeric())
 for (day in uniqueDays) {
         s <- sum(dataDailySteps[dataDailySteps$date == day, ]$steps)
@@ -59,15 +64,19 @@ meanSteps <- mean(dailySteps$steps)
 medianSteps <- median(dailySteps$steps)
 ```
 We can generate a histogram to show the steps distribution
-```{r}
+
+```r
 hist(dailySteps$steps,breaks = 10)
 ```
 
-The mean number of daily steps is `r format(meanSteps)` and the median is `r format(medianSteps)`
+![](PA1_template_files/figure-html/unnamed-chunk-4-1.png) 
+
+The mean number of daily steps is 10766.19 and the median is 10765
 
 ## What is the average daily activity pattern?
 Now we will study the average steps in 5-minutes intervals.
-```{r}
+
+```r
 # Clean NAs - SAME DF as dataDailySteps
 dataInterval <- data[valid, ] 
 
@@ -86,32 +95,43 @@ names(meanInterval)[2] <- "interval"
 
 # Plot mean ~ interval
 plot(meanInterval$mean ~ meanInterval$interval, type='l')
+```
 
+![](PA1_template_files/figure-html/unnamed-chunk-5-1.png) 
+
+```r
 # Max steps interval
 maxS <- max(meanInterval$mean)
 maxI <- meanInterval[maxS, ]$interval
 ```
-The maximum number of steps happens in the `r maxI` interval where there is an average of `r format(maxS)` steps
+The maximum number of steps happens in the 1705 interval where there is an average of 206.1698 steps
 
 ## Imputing missing values
 First we will calculate the number of NAs
-```{r}
-sum(is.na(data$steps))
+
+```r
+sumNAs <- sum(is.na(data$steps))
 ```
+
+The total number of NAs is 2304
+
 To fill the NAs we will use the mean value for the respective interval. The first procedure will be to imput data for the missing values columns
-```{r}
+
+```r
 dataNA <- merge(data[!valid,],meanInterval, by='interval')
 dataNA$steps <- dataNA$mean
 dataNA$mean <- NULL
 head(dataNA)
 ```
 Then we merge this data with the old dataframe without the NAs
-````{r}
+
+```r
 data <- rbind(data[valid, ], dataNA)
 ```
 
 Now we will analyse the impact of the NAs removal procedure. We will repeat the procedure from the first part of the assignment
-```{r}
+
+```r
 # Calulate daily sums
 dailySteps.noNA <- data.frame(date=as.Date(character()),steps = numeric())
 for (day in uniqueDays) {
@@ -133,11 +153,14 @@ medianSteps.noNA <- median(dailySteps.noNA$steps)
 hist(dailySteps.noNA$steps,breaks = 10)
 ```
 
-The mean number of daily steps is `r format(meanSteps.noNA)` and the median is `r format(medianSteps.noNA)` which is the same as before.
+![](PA1_template_files/figure-html/unnamed-chunk-9-1.png) 
+
+The mean number of daily steps is 10766.19 and the median is 10765 which is the same as before.
 
 ## Are there differences in activity patterns between weekdays and weekends?
 First we will create a new columns
-```{r}
+
+```r
 # Classify as weekday or weekend
 data$tDay <- ifelse(weekdays(data$date) == 'Sunday' 
                     | weekdays(data$date) == 'Saturday', 
@@ -145,8 +168,8 @@ data$tDay <- ifelse(weekdays(data$date) == 'Sunday'
 data$tDay <- as.factor(data$tDay)
 ```
 Now we calculate the sums to the create a new dataset
-```{r}
 
+```r
 # I will use this dataframe to store weekday/weekend interval sums
 steps.interval <- data.frame(steps = numeric(),
                              interval = integer(),
@@ -179,7 +202,8 @@ for (interval in unique(wDay$interval)) {
 }
 ```
 Now to generate the graphic analisys we will use GGPLOT2, because it looks beter...
-```{r}
+
+```r
 library('ggplot2')
 g <- qplot(interval, steps, data = steps.interval, 
            color = dType,
@@ -190,5 +214,7 @@ g <- g + labs(x = "Interval", y = "Number of steps")
 g <- g + labs(title = "Steps through the day (Weekend vs Weekday)")
 g
 ```
+
+![](PA1_template_files/figure-html/unnamed-chunk-12-1.png) 
 
 Our conclusion is that during the weekend people start to walk later and on average they walk less than during the weekdays.
